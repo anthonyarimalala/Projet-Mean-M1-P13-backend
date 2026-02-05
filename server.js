@@ -11,11 +11,9 @@ app.use(express.json());
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connecté"))
-  .catch((err) => console.log("Erreur MongoDB: ",err));
+  .catch((err) => console.log(err));
 // Routes
-app.use("/api/articles", require("./routes/articleRoutes"));
-app.use("/api/boutiques", require("./routes/crudBoutiqueRoutes"));
-
+app.use("/articles", require("./routes/articleRoutes"));
 app.listen(PORT, () =>
   console.log(`Serveur démarré sur le port
 ${PORT}`)
