@@ -1,10 +1,6 @@
 const express = require("express");
 const router = express.Router();
-<<<<<<< Updated upstream
 const Boutique = require("../models/Boutique"); 
-=======
-const Boutique = require("../models/Boutique"); // ton schema Boutique
->>>>>>> Stashed changes
 
 // =====================================
 //  CREATE 
@@ -20,11 +16,7 @@ router.post("/", async (req, res) => {
 });
 
 // =====================================
-<<<<<<< Updated upstream
 //  READ 
-=======
-// READ 
->>>>>>> Stashed changes
 // =====================================
 router.get("/", async (req, res) => {
   try {
@@ -36,11 +28,7 @@ router.get("/", async (req, res) => {
 });
 
 // =====================================
-<<<<<<< Updated upstream
 //  READ BY ID
-=======
-//  GET BY ID
->>>>>>> Stashed changes
 // =====================================
 router.get("/:id", async (req, res) => {
   try {

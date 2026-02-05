@@ -13,14 +13,7 @@ mongoose
   .then(() => console.log("MongoDB connecté"))
   .catch((err) => console.log(err));
 // Routes
-<<<<<<< Updated upstream
 app.use("/articles", require("./routes/articleRoutes"));
-=======
-app.use("/api/articles", require("./routes/articleRoutes"));
-app.use("/api/auth", require("./routes/authRoutes"));
-app.use("/api/boutiques", require("./routes/crudBoutiqueRoutes")); // ✅ Ajouté
-
->>>>>>> Stashed changes
 app.listen(PORT, () =>
   console.log(`Serveur démarré sur le port
 ${PORT}`)
