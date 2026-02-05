@@ -35,6 +35,9 @@ router.post("/register", async (req, res) => {
     await user.save();
     res.status(201).json({ message: "Utilisateur créé" });
   } catch (error) {
+    if (error.code === 11000 && error.keyValue?.email) {
+      res.status(400).json({ message: "Cet email est déjà utilisé" });
+    }
     res.status(400).json({ message: error.message });
   }
 });
@@ -45,15 +48,20 @@ router.post("/login", async (req, res) => {
 
     // 🔑 sélectionner le password même si select: false
     const user = await User.findOne({ email }).select("+password");
-    if (!user)
-      return res.status(401).json({ message: "Identifiants invalides" });
+    if (!user) return res.status(401).json({ message: "Email introuvable" });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch)
-      return res.status(401).json({ message: "Identifiants invalides" });
+      return res.status(401).json({ message: "Mot de passe incorrect" });
 
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      {
+        userId: user._id,
+        role: user.role,
+        nom: user.nom,
+        prenom: user.prenom,
+        email: user.email,
+      },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN }
     );
@@ -130,19 +138,14 @@ router.put(
   }
 );
 
-router.get(
-  "/users",
-  auth,
-  roleMiddleware("ADMIN"),
-  async (req, res) => {
-    try {
-      const users = await User.find({}, { password: 0 });
+router.get("/users", auth, roleMiddleware("ADMIN"), async (req, res) => {
+  try {
+    const users = await User.find({}, { password: 0 });
 
-      res.json(users);
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-);
+});
 
 module.exports = router;
