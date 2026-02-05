@@ -35,10 +35,12 @@ router.post("/register", async (req, res) => {
     await user.save();
     res.status(201).json({ message: "Utilisateur créé" });
   } catch (error) {
-    if (error.code === 11000 && error.keyValue?.email) {
-      res.status(400).json({ message: "Cet email est déjà utilisé" });
-    }
-    res.status(400).json({ message: error.message });
+    const msg =
+      error.code === 11000 && error.keyValue?.email
+        ? "Cet email est déjà utilisé"
+        : error.message;
+
+    res.status(400).json({ message: msg });
   }
 });
 
