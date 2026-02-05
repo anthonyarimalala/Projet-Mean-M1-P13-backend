@@ -15,6 +15,7 @@ mongoose
 // Routes
 app.use("/api/articles", require("./routes/articleRoutes"));
 app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/boutiques", require("./routes/crudBoutiqueRoutes")); 
 app.listen(PORT, () =>
   console.log(`Serveur démarré sur le port
 ${PORT}`)
