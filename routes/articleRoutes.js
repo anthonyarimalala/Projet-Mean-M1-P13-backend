@@ -1,6 +1,21 @@
 const express = require("express");
 const router = express.Router();
 const Article = require("../models/Article");
+
+const auth = require("../middleware/authMiddleware");
+const roleMiddleware = require("../middleware/roleMiddleware");
+
+
+// Lire tous les articles
+router.get("/", auth, roleMiddleware("ACHETEUR"), async (req, res) => {
+  try {
+    const articles = await Article.find();
+    res.json(articles);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Créer un article
 router.post("/", async (req, res) => {
   try {
@@ -11,15 +26,7 @@ router.post("/", async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 });
-// Lire tous les articles
-router.get("/", async (req, res) => {
-  try {
-    const articles = await Article.find();
-    res.json(articles);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+
 // Mettre à jour un article
 router.put("/:id", async (req, res) => {
   try {

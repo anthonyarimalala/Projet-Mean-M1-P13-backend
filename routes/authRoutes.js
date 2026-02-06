@@ -77,7 +77,6 @@ router.post("/login", async (req, res) => {
 // Mettre à jour un utilisateur
 router.put(
   "/users/:id",
-  auth,
   roleMiddleware("ADMIN", "BOUTIQUE"),
   async (req, res) => {
     try {
