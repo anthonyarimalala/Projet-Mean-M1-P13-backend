@@ -13,6 +13,7 @@ mongoose
   .then(() => console.log("MongoDB connecté"))
   .catch((err) => console.log("Erreur MongoDB: ",err));
 // Routes
+app.use("/api/annonces", require("./routes/annonceRoutes"));
 app.use("/api/articles", require("./routes/articleRoutes"));
 app.use("/api/auth", require("./routes/authRoutes"));
 app.listen(PORT, () =>
