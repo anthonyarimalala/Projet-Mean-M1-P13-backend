@@ -44,9 +44,9 @@ const AnnonceSchema = new mongoose.Schema(
 
     images: [
       {
-        url: { type: String, required: true, trim: true },
+        url: { type: String, required: false, trim: true },
         alt: { type: String, trim: true },
-        ordre: { type: Number, required: true },
+        ordre: { type: Number, required: false },
       },
     ],
 

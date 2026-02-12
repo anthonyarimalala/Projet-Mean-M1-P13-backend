@@ -21,27 +21,27 @@ const getPubliee = async (page = 1, limit = 10) => {
       .sort({ created_at: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('emetteur.user_id', 'nom prenom email'), // Ajoutez les champs que vous voulez récupérer
+      .populate("emetteur.user_id", "nom prenom email"), // Ajoutez les champs que vous voulez récupérer
     Annonce.countDocuments(query),
   ]);
 
   const pages = limit > 0 ? Math.ceil(total / limit) : 0;
 
   // Transformer les données pour un format plus pratique
-  const formattedItems = items.map(annonce => {
+  const formattedItems = items.map((annonce) => {
     const annonceObj = annonce.toObject();
-    
+
     // Si l'utilisateur est peuplé, ajouter ses informations
     if (annonceObj.emetteur && annonceObj.emetteur.user_id) {
       annonceObj.emetteur.user = {
         nom: annonceObj.emetteur.user_id.nom,
         prenom: annonceObj.emetteur.user_id.prenom,
-        email: annonceObj.emetteur.user_id.email
+        email: annonceObj.emetteur.user_id.email,
       };
       // Garder l'ID original ou le remplacer
       annonceObj.emetteur.user_id = annonceObj.emetteur.user_id._id;
     }
-    
+
     return annonceObj;
   });
 
