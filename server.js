@@ -16,6 +16,7 @@ mongoose
 // Routes
 app.use("/api/upload", uploadRoute);
 app.use("/api/annonces", require("./routes/annonceRoutes"));
+app.use("/api/commentaires", require("./routes/annonceCommentaireRoutes"));
 app.use("/api/articles", require("./routes/articleRoutes"));
 app.use("/api/auth", require("./routes/authRoutes"));
 app.listen(PORT, () =>
