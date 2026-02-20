@@ -19,6 +19,10 @@ app.use("/api/annonces", require("./routes/annonceRoutes"));
 app.use("/api/commentaires", require("./routes/annonceCommentaireRoutes"));
 app.use("/api/articles", require("./routes/articleRoutes"));
 app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/articles", require("./routes/articleRoutes"));
+app.use("/api/boutiques", require("./routes/crudBoutiqueRoutes"));
+app.use("/api/produits", require("./routes/crudProduits") )
+
 app.listen(PORT, () =>
   console.log(`Serveur démarré sur le port
 ${PORT}`)
