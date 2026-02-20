@@ -12,7 +12,7 @@ app.use(express.json());
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connecté"))
-  .catch((err) => console.log("Erreur MongoDB: ",err));
+  .catch((err) => console.log("Erreur MongoDB: ", err));
 // Routes
 app.use("/api/upload", uploadRoute);
 app.use("/api/annonces", require("./routes/annonceRoutes"));
@@ -21,7 +21,7 @@ app.use("/api/articles", require("./routes/articleRoutes"));
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/articles", require("./routes/articleRoutes"));
 app.use("/api/boutiques", require("./routes/crudBoutiqueRoutes"));
-app.use("/api/produits", require("./routes/crudProduits") )
+app.use("/api/produits", require("./routes/crudProduits"));
 
 app.listen(PORT, () =>
   console.log(`Serveur démarré sur le port
