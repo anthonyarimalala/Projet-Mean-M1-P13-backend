@@ -40,7 +40,55 @@ router.post("/add", async (req, res) => {
 // =====================================
 // AJOUTER PLUSIEURS PRODUITS (/add-batch)
 // =====================================
+  try {
+    const { user_id, boutiques } = req.body;
 
+    console.log("Body reçu pour add-batch:", req.body);
+
+    if (!user_id || !boutiques || !Array.isArray(boutiques)) {
+      return res.status(400).json({ message: "Données invalides" });
+    }
+
+    // Récupérer le panier actif
+    let panier = await Panier.findOne({ user_id, is_active: true });
+    if (!panier) {
+      console.log("Création d'un nouveau panier pour l'utilisateur:", user_id);
+      panier = new Panier({ user_id, boutiques: [] });
+    }
+
+    // Parcourir chaque boutique du body
+    for (const b of boutiques) {
+      let boutique = panier.boutiques.find(x => x.boutique_id === b.boutique_id);
+
+      if (!boutique) {
+        // ⚡ Créer correctement le sous-document boutique
+        boutique = panier.boutiques.create({
+          boutique_id: b.boutique_id,
+          produits: []
+        });
+        panier.boutiques.push(boutique);
+        console.log("Nouvelle boutique ajoutée au panier:", b.boutique_id);
+      }
+
+      // Ajouter les produits
+      for (const p of b.produits) {
+        console.log("Produit à ajouter:", p);
+
+        let produit = boutique.produits.find(x => x.produit_id === p.produit_id);
+        if (produit) {
+          produit.quantite += Number(p.quantite);
+        } else {
+          // ⚡ Ici aussi, on laisse Mongoose gérer le sous-document
+          boutique.produits.push({
+            produit_id: String(p.produit_id),
+            quantite: Number(p.quantite)
+          });
+        }
+
+        console.log("Produit ajouté à la boutique", b.boutique_id, ":", produit || p);
+      }
+
+      console.log("Produits après ajout dans la boutique", b.boutique_id, ":", boutique.produits);
     }
 
     // Indiquer à Mongoose que boutiques a été modifié
@@ -58,7 +106,6 @@ router.post("/add", async (req, res) => {
 });
 */
 
- 
 
 router.post("/add-batch", async (req, res) => {
   try {
