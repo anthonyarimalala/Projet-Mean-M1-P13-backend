@@ -18,7 +18,7 @@ async function getPaiements({ page = 1, limit = 10, filter = {} }) {
   const skip = (page - 1) * limit;
 
   const paiements = await HistoriquePaiement.find(filter)
-    .sort({ date_prevue: 1 }) // ordre croissant par date_prevue
+    .sort({ date_prevue: -1 }) // ordre croissant par date_prevue
     .skip(skip)
     .limit(limit)
     .exec();
