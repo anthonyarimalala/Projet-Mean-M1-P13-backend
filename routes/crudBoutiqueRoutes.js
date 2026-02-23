@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const Boutique = require("../models/Boutique"); 
+const Boutique = require("../models/Boutique");
 
 // =====================================
-//  CREATE 
+//  CREATE
 // =====================================
 router.post("/", async (req, res) => {
   try {
@@ -16,7 +16,7 @@ router.post("/", async (req, res) => {
 });
 
 // =====================================
-//  READ 
+//  READ
 // =====================================
 router.get("/", async (req, res) => {
   try {
@@ -43,7 +43,29 @@ router.get("/:id", async (req, res) => {
 });
 
 // =====================================
-//  UPDATE 
+//  READ BY LOCATAIRE ID
+// =====================================
+router.get("/locataire/:locataireId", async (req, res) => {
+  try {
+    const boutiques = await Boutique.find({
+      locataire_id: req.params.locataireId,
+      is_deleted: false,
+    });
+
+    if (boutiques.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "Aucune boutique trouvée pour ce locataire" });
+    }
+
+    res.json(boutiques);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// =====================================
+//  UPDATE
 // =====================================
 router.put("/:id", async (req, res) => {
   try {

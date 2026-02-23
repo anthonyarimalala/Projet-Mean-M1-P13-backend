@@ -15,6 +15,7 @@ mongoose
   .catch((err) => console.log("Erreur MongoDB: ", err));
 // Routes
 app.use("/api/upload", uploadRoute);
+app.use("/api/paiements", require("./routes/historiquePaiementRoutes"));
 app.use("/api/annonces", require("./routes/annonceRoutes"));
 app.use("/api/commentaires", require("./routes/annonceCommentaireRoutes"));
 app.use("/api/articles", require("./routes/articleRoutes"));
