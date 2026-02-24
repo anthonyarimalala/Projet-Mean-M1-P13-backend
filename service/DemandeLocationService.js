@@ -1,5 +1,5 @@
 const DemandeLocation = require("../models/DemandeLocation");
-
+const boutiqueService = require("../service/ABoutiqueService");
 /**
  * ➜ CREATE - Créer une nouvelle demande de location
  */
@@ -102,18 +102,71 @@ const getDemandesEnAttente = async (page = 1, limit = 10) => {
 /**
  * ➜ UPDATE STATUT - Mettre à jour le statut d'une demande
  */
+/**
+ * Mettre à jour le statut d'une demande (Admin)
+ */
 const updateDemandeStatut = async (id, statut, adminId, notes = null) => {
-  const updateData = {
-    statut,
-    "traitement.date_traitement": new Date(),
-    "traitement.traite_par": adminId,
-  };
+  const demande = await DemandeLocation.findById(id);
 
-  if (notes) {
-    updateData["traitement.notes_admin"] = notes;
+  if (!demande) {
+    throw new Error("Demande introuvable");
   }
 
-  return await DemandeLocation.findByIdAndUpdate(id, updateData, { new: true });
+  // Mise à jour de la demande
+  demande.statut = statut;
+  demande.traitement = {
+    date_traitement: new Date(),
+    traite_par: adminId,
+    notes_admin: notes || null,
+  };
+
+  await demande.save();
+
+  // Si la demande est approuvée
+  if (statut === "APPROUVEE") {
+    const boutiqueId = demande.boutique.boutique_id;
+    const locataireId =
+      demande.demandeur.user_id._id || demande.demandeur.user_id;
+
+    try {
+      // 1. Mettre à jour la boutique avec les informations de la demande
+      await boutiqueService.updateBoutiqueFromDemande(
+        boutiqueId,
+        demande,
+        locataireId
+      );
+
+      console.log(`✅ Boutique ${boutiqueId} attribuée à ${locataireId}`);
+
+      // 2. Refuser toutes les autres demandes de la boutique
+      const autresRefusees = await DemandeLocation.updateMany(
+        {
+          "boutique.boutique_id": boutiqueId,
+          statut: "EN_ATTENTE",
+          _id: { $ne: id },
+        },
+        {
+          $set: {
+            statut: "REJETEE",
+            "traitement.date_traitement": new Date(),
+            "traitement.traite_par": adminId,
+            "traitement.notes_admin":
+              "Automatiquement refusée suite à l'approbation d'une autre demande pour cette boutique",
+          },
+        }
+      );
+
+      console.log(
+        `🔄 ${autresRefusees.modifiedCount} autre(s) demande(s) refusée(s) pour la boutique ${boutiqueId}`
+      );
+    } catch (error) {
+      console.error(`❌ Erreur lors de l'approbation:`, error);
+      // On ne throw pas l'erreur pour que la demande soit quand même marquée comme approuvée
+      // Mais on log l'erreur pour investigation
+    }
+  }
+
+  return demande;
 };
 
 /**
