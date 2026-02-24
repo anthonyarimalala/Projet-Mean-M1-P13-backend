@@ -1,10 +1,6 @@
 const mongoose = require("mongoose");
 
 const ProduitPanierSchema = new mongoose.Schema({
-  produit_id: { type: String, required: true, ref: "Produit" },
-  quantite: { type: Number, required: true, default: 1, min: 1 },
-  prix_unitaire: { type: Number, required: true },
-  total_produit: { type: Number, required: true }
   produit_id: { 
     type: mongoose.Schema.Types.ObjectId, 
     required: true, 
