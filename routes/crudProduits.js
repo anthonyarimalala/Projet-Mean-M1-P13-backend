@@ -83,4 +83,30 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// =====================================
+// DELETE TOUS LES PRODUITS (soft delete global)
+// =====================================
+router.delete("/delete-all/soft", async (req, res) => {
+  try {
+
+    console.log("Suppression soft de tous les produits...");
+
+    const result = await Produit.updateMany(
+      { is_active: true },
+      { $set: { is_active: false } }
+    );
+
+    console.log("Nombre de produits désactivés :", result.modifiedCount);
+
+    res.status(200).json({
+      message: "Tous les produits ont été désactivés",
+      total: result.modifiedCount
+    });
+
+  } catch (error) {
+    console.error("Erreur suppression globale :", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;

@@ -315,6 +315,97 @@ router.get("/:user_id", async (req, res) => {
 });
 
 // =====================================
+// RÉCUPÉRER UNE BOUTIQUE DU PANIER
+// =====================================
+router.get("/:user_id/boutique/:boutique_id", async (req, res) => {
+  try {
+    const { user_id, boutique_id } = req.params;
+
+    console.log("User ID reçu :", user_id);
+    console.log("Boutique ID reçu :", boutique_id);
+
+    const panier = await Panier.findOne({ user_id, is_active: true }).lean();
+
+    if (!panier) {
+      console.log("Aucun panier actif trouvé");
+      return res.status(404).json({ message: "Panier introuvable" });
+    }
+
+    console.log("Panier trouvé :", panier._id);
+
+    // 🔎 Comparaison en string
+    const boutique = panier.boutiques.find(
+      b => String(b.boutique_id) === boutique_id
+    );
+
+    if (!boutique) {
+      console.log("Boutique non trouvée dans le panier");
+      return res.status(404).json({ message: "Boutique non trouvée dans le panier" });
+    }
+
+    console.log("Boutique trouvée :", boutique);
+
+    res.status(200).json(boutique);
+
+  } catch (error) {
+    console.error("Erreur récupération boutique :", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
+
+// =====================================
+// RÉCUPÉRER UNE BOUTIQUE DANS TOUS LES PANIERS ACTIFS
+// =====================================
+router.get("/boutique/:boutique_id", async (req, res) => {
+  try {
+    const { boutique_id } = req.params;
+
+    console.log("Boutique ID reçu :", boutique_id);
+
+    // 🔎 Récupérer tous les paniers actifs
+    const paniers = await Panier.find({ is_active: true }).lean();
+
+    if (!paniers || paniers.length === 0) {
+      console.log("Aucun panier actif trouvé");
+      return res.status(404).json({ message: "Aucun panier actif trouvé" });
+    }
+
+    // 🔎 Filtrer les paniers contenant cette boutique
+    const result = paniers
+      .map(panier => {
+        const boutique = panier.boutiques.find(
+          b => String(b.boutique_id) === boutique_id
+        );
+        if (boutique) {
+          return {
+            user_id: panier.user_id, // on garde le user_id
+            boutique: boutique
+          };
+        }
+        return null;
+      })
+      .filter(item => item !== null);
+
+    if (result.length === 0) {
+      console.log("Aucune boutique trouvée dans les paniers");
+      return res.status(404).json({ message: "Boutique non trouvée dans aucun panier actif" });
+    }
+
+    console.log("Résultats trouvés :", result);
+
+    res.status(200).json(result);
+
+  } catch (error) {
+    console.error("Erreur récupération boutique :", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
+
+// =====================================
 // SUPPRIMER LE PANIER D’UN UTILISATEUR
 // =====================================
 router.delete("/delete/:user_id", async (req, res) => {
