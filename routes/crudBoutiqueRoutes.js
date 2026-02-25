@@ -65,6 +65,28 @@ router.get("/locataire/:locataireId", async (req, res) => {
 });
 
 // =====================================
+//  READ UNAVAILABLE (is_disponible = false)
+// =====================================
+router.get("/disponible/non", async (req, res) => {
+  try {
+    const boutiques = await Boutique.find({
+      is_disponible: false,
+      is_deleted: false,
+    });
+
+    if (boutiques.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "Aucune boutique non disponible trouvée" });
+    }
+
+    res.json(boutiques);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// =====================================
 //  UPDATE
 // =====================================
 router.put("/:id", async (req, res) => {
