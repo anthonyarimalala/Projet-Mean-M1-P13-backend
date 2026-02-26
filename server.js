@@ -22,6 +22,7 @@ app.use("/api/articles", require("./routes/articleRoutes"));
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/articles", require("./routes/articleRoutes"));
 app.use("/api/boutiques", require("./routes/crudBoutiqueRoutes"));
+app.use("/api/boutique-avis", require("./routes/boutiqueAvisRoutes"));
 app.use("/api/demandes", require("./routes/DemandeLocationRoutes"));
 app.use("/api/produits", require("./routes/crudProduits"));
 
