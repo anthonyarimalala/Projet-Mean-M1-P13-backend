@@ -2,8 +2,6 @@ const mongoose = require("mongoose");
 
 const BoutiqueSchema = new mongoose.Schema(
   {
-
-
     numero: {
       type: String,
       required: true,
@@ -42,8 +40,7 @@ const BoutiqueSchema = new mongoose.Schema(
     },
 
     locataire_id: {
-      type: String, 
-      required: true,
+      type: String,
       ref: "User",
     },
 
@@ -53,7 +50,7 @@ const BoutiqueSchema = new mongoose.Schema(
 
     categories: [
       {
-        type: String, 
+        type: String,
         trim: true,
       },
     ],
