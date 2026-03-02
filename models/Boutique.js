@@ -2,10 +2,7 @@ const mongoose = require("mongoose");
 
 const BoutiqueSchema = new mongoose.Schema(
   {
-    _id: {
-      type: String, 
-      required: true,
-    },
+
 
     numero: {
       type: String,

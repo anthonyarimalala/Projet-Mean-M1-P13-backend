@@ -28,21 +28,6 @@ router.get("/", async (req, res) => {
 });
 
 // =====================================
-//  READ BY ID
-// =====================================
-router.get("/:id", async (req, res) => {
-  try {
-    const boutique = await Boutique.findById(req.params.id);
-    if (!boutique || boutique.is_deleted) {
-      return res.status(404).json({ message: "Boutique non trouvée" });
-    }
-    res.json(boutique);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// =====================================
 //  UPDATE 
 // =====================================
 router.put("/:id", async (req, res) => {
@@ -77,5 +62,63 @@ router.delete("/:id", async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+// =====================================
+//  READ BY LOCATAIRE ID
+// =====================================
+router.get("/locataire/:locataireId", async (req, res) => {
+  try {
+    const boutiques = await Boutique.find({
+      locataire_id: req.params.locataireId,
+      is_deleted: false
+    });
+
+    if (!boutiques || boutiques.length === 0) {
+      return res.status(404).json({ message: "Aucune boutique trouvée pour ce locataire" });
+    }
+
+    res.json(boutiques);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
+// =====================================
+//  READ - Boutiques avec locataire
+// =====================================
+router.get("/avec-locataire", async (req, res) => {
+  try {
+    // Recherche des boutiques avec locataire_id défini et non supprimées
+    const boutiques = await Boutique.find({
+      locataire_id: { $ne: null }, // locataire_id différent de null
+      is_deleted: false,
+    });
+
+    if (!boutiques || boutiques.length === 0) {
+      return res.status(404).json({ message: "Aucune boutique avec locataire trouvée" });
+    }
+
+    res.json(boutiques);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// =====================================
+//  READ BY ID
+// =====================================
+router.get("/:id", async (req, res) => {
+  try {
+    const boutique = await Boutique.findById(req.params.id);
+    if (!boutique || boutique.is_deleted) {
+      return res.status(404).json({ message: "Boutique non trouvée" });
+    }
+    res.json(boutique);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 
 module.exports = router;

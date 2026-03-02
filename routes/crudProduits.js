@@ -83,4 +83,41 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// =====================================
+//  READ BY BOUTIQUE ID
+// =====================================
+router.get("/boutique/:boutiqueId", async (req, res) => {
+  try {
+    const produits = await Produit.find({
+      boutique_id: req.params.boutiqueId,
+      is_active: true // optionnel : ne récupérer que les produits actifs
+    });
+
+    if (!produits || produits.length === 0) {
+      return res.status(404).json({ message: "Aucun produit trouvé pour cette boutique" });
+    }
+
+    res.json(produits);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// =====================================
+// READ boutique_id BY PRODUIT ID
+// =====================================
+router.get("/:id/boutique", async (req, res) => {
+  try {
+    const produit = await Produit.findById(req.params.id).select("boutique_id");
+
+    if (!produit) {
+      return res.status(404).json({ message: "Produit non trouvé" });
+    }
+
+    res.json({ boutique_id: produit.boutique_id });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;

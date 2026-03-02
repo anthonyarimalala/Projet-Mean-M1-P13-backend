@@ -1,0 +1,468 @@
+const express = require("express");
+const router = express.Router();
+const Panier = require("../models/Panier");
+const Produit = require("../models/Produits");
+const Boutique = require("../models/Boutique");
+const Stock = require('../models/Stock');   
+
+// =====================================
+// AJOUTER UN PRODUIT UNIQUE
+// =====================================
+router.post("/add", async (req, res) => {
+  try {
+    const { user_id, boutique_id, produit_id, quantite = 1 } = req.body;
+    if (!user_id || !boutique_id || !produit_id) {
+      return res.status(400).json({ message: "Données invalides" });
+    }
+
+    let panier = await Panier.findOne({ user_id, is_active: true });
+    if (!panier) panier = new Panier({ user_id, boutiques: [] });
+
+    let boutique = panier.boutiques.find(b => b.boutique_id === boutique_id);
+    if (!boutique) {
+      boutique = { boutique_id, produits: [] };
+      panier.boutiques.push(boutique);
+    }
+
+    if (!Array.isArray(boutique.produits)) boutique.produits = [];
+
+    let produit = boutique.produits.find(p => p.produit_id === produit_id);
+    if (produit) produit.quantite += Number(quantite);
+    else boutique.produits.push({ produit_id, quantite: Number(quantite) });
+
+    const savedPanier = await panier.save();
+    res.status(201).json(savedPanier);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
+// =====================================
+// AJOUTER PLUSIEURS PRODUITS (/add-batch)
+// =====================================
+router.post("/add-batch", async (req, res) => {
+    try {
+      console.log("========== ADD BATCH ==========");
+      console.log("Body reçu :", JSON.stringify(req.body, null, 2));
+  
+      const { user_id, boutiques } = req.body;
+  
+      if (!user_id || !Array.isArray(boutiques)) {
+        console.log("❌ Données invalides");
+        return res.status(400).json({ message: "Données invalides" });
+      }
+  
+      // 🔎 Chercher un panier actif
+      let panier = await Panier.findOne({ user_id, is_active: true });
+  
+      if (!panier) {
+        console.log("🆕 Création nouveau panier pour :", user_id);
+        panier = new Panier({ user_id, boutiques: [] });
+      } else {
+        console.log("📦 Panier existant trouvé :", panier._id);
+      }
+  
+      // ===============================
+      // Fonctions utilitaires
+      // ===============================
+      const findBoutique = (boutiquesArray, id) =>
+        boutiquesArray.find(b => b.boutique_id.toString() === id.toString());
+  
+      const findProduit = (produitsArray, id) =>
+        produitsArray.find(p => p.produit_id.toString() === id.toString());
+  
+      // ===============================
+      // Traitement du panier
+      // ===============================
+      for (const b of boutiques) {
+        console.log("---- Traitement boutique :", b.boutique_id);
+  
+        let boutique = findBoutique(panier.boutiques, b.boutique_id);
+  
+        if (!boutique) {
+          console.log("➕ Nouvelle boutique ajoutée :", b.boutique_id);
+  
+          boutique = panier.boutiques.create({
+            boutique_id: b.boutique_id,
+            produits: [],
+            total_boutique: 0
+          });
+  
+          panier.boutiques.push(boutique);
+        } else {
+          console.log("✔ Boutique déjà présente :", b.boutique_id);
+        }
+  
+        // Traitement des produits
+        for (const p of b.produits) {
+          console.log("   👉 Produit reçu :", p);
+  
+          const produitDB = await Produit.findById(p.produit_id);
+  
+          if (!produitDB) {
+            console.log("   ❌ Produit introuvable :", p.produit_id);
+            continue;
+          }
+  
+          console.log("   ✔ Produit trouvé en DB :", produitDB._id);
+  
+          const prix = produitDB.en_vente
+            ? produitDB.prix_promo
+            : produitDB.prix_vente;
+  
+          const quantiteAjoutee = Number(p.quantite);
+          const totalProduit = prix * quantiteAjoutee;
+  
+          let produit = findProduit(boutique.produits, p.produit_id);
+  
+          if (produit) {
+            console.log("   🔁 Produit déjà dans panier, mise à jour quantité");
+  
+            produit.quantite += quantiteAjoutee;
+            produit.total_produit = produit.prix_unitaire * produit.quantite;
+  
+            console.log("   🔄 Nouvelle quantité :", produit.quantite);
+          } else {
+            console.log("   ➕ Ajout nouveau produit");
+  
+            boutique.produits.push({
+              produit_id: p.produit_id,
+              quantite: quantiteAjoutee,
+              prix_unitaire: prix,
+              total_produit: totalProduit
+            });
+  
+            console.log("   ✅ Produit ajouté :", {
+              produit_id: p.produit_id,
+              quantite: quantiteAjoutee,
+              prix_unitaire: prix,
+              total_produit: totalProduit
+            });
+          }
+        }
+  
+        // 🔥 Recalcul total boutique
+        boutique.total_boutique = boutique.produits.reduce(
+          (sum, prod) => sum + prod.total_produit,
+          0
+        );
+  
+        console.log("🧮 Total boutique recalculé :", boutique.total_boutique);
+      }
+  
+      console.log("💾 Panier avant sauvegarde :");
+      console.log(JSON.stringify(panier, null, 2));
+  
+      panier.markModified("boutiques");
+      const savedPanier = await panier.save();
+  
+      console.log("✅ Panier sauvegardé :");
+      console.log(JSON.stringify(savedPanier, null, 2));
+  
+      // ======================================
+      // 🔄 MISE À JOUR DU STOCK
+      // ⚡ BASÉE UNIQUEMENT SUR LA REQUÊTE
+      // ======================================
+      console.log("🔧 Mise à jour du stock (quantités reçues)...");
+  
+      for (const b of boutiques) {
+        for (const p of b.produits) {
+  
+          console.log(`   🔎 Recherche stock pour produit ${p.produit_id}`);
+  
+          const stock = await Stock.findOne({ produit_id: p.produit_id });
+  
+          if (!stock) {
+            console.log(`   ❌ Aucun stock trouvé pour ${p.produit_id}`);
+            continue;
+          }
+  
+          console.log(`   📦 Stock AVANT : ${stock.quantite}`);
+          console.log(`   ➖ Quantité à retirer : ${p.quantite}`);
+  
+          stock.quantite -= Number(p.quantite);
+  
+          if (stock.quantite < 0) {
+            console.log("   ⚠ Stock négatif détecté → correction à 0");
+            stock.quantite = 0;
+          }
+  
+          await stock.save();
+  
+          console.log(`   ✅ Stock APRÈS : ${stock.quantite}`);
+        }
+      }
+  
+      console.log("✅ Stock mis à jour avec succès.");
+      console.log("========== FIN ADD BATCH ==========\n");
+  
+      res.status(201).json(savedPanier);
+  
+    } catch (error) {
+      console.error("❌ ERREUR ADD-BATCH :", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+// =====================================
+// CALCULER LE PANIER
+// =====================================
+router.post("/calc", async (req, res) => {
+  try {
+    const { user_id, boutiques } = req.body;
+    if (!user_id || !boutiques || !Array.isArray(boutiques)) {
+      return res.status(400).json({ message: "Données invalides" });
+    }
+
+    // Récupérer tous les ids des produits
+    const produitIds = [];
+    boutiques.forEach(b => b.produits.forEach(p => produitIds.push(p.produit_id)));
+
+    const produitsDB = await Produit.find({ _id: { $in: produitIds } }).lean();
+    const produitsMap = {};
+    produitsDB.forEach(p => (produitsMap[p._id] = p));
+
+    let totalGeneral = 0;
+    const result = [];
+
+    for (const b of boutiques) {
+      const boutiqueData = await Boutique.findById(b.boutique_id).lean();
+      if (!boutiqueData) continue;
+
+      let sousTotal = 0;
+      const produitsDetail = [];
+
+      for (const p of b.produits) {
+        const produitData = produitsMap[p.produit_id];
+        if (!produitData) continue;
+
+        const prix = produitData.prix_promo && produitData.prix_promo > 0
+          ? produitData.prix_promo
+          : produitData.prix_vente;
+
+        const montant = prix * p.quantite;
+        sousTotal += montant;
+
+        produitsDetail.push({
+          produit_id: produitData._id,
+          nom: produitData.nom,
+          prix,
+          quantite: p.quantite,
+          montant,
+        });
+      }
+
+      totalGeneral += sousTotal;
+
+      result.push({
+        boutique_id: boutiqueData._id,
+        nom_boutique: boutiqueData.nom_boutique,
+        sousTotal,
+        produits: produitsDetail,
+      });
+    }
+
+    res.status(200).json({
+      user_id,
+      totalGeneral,
+      boutiques: result,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// =====================================
+// MODIFIER QUANTITÉ D’UN PRODUIT
+// =====================================
+router.put("/update", async (req, res) => {
+  try {
+    const { user_id, boutique_id, produit_id, quantite } = req.body;
+    if (!user_id || !boutique_id || !produit_id || quantite < 0) {
+      return res.status(400).json({ message: "Données invalides" });
+    }
+
+    const panier = await Panier.findOne({ user_id, is_active: true });
+    if (!panier) return res.status(404).json({ message: "Panier non trouvé" });
+
+    const boutique = panier.boutiques.find(b => b.boutique_id === boutique_id);
+    if (!boutique) return res.status(404).json({ message: "Boutique non trouvée dans le panier" });
+
+    const produit = boutique.produits.find(p => p.produit_id === produit_id);
+    if (!produit) return res.status(404).json({ message: "Produit non trouvé dans le panier" });
+
+    if (quantite === 0) {
+      boutique.produits = boutique.produits.filter(p => p.produit_id !== produit_id);
+    } else {
+      produit.quantite = quantite;
+    }
+
+    const savedPanier = await panier.save();
+    res.status(200).json(savedPanier);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// =====================================
+// SUPPRIMER UN PRODUIT
+// =====================================
+router.delete("/remove", async (req, res) => {
+  try {
+    const { user_id, boutique_id, produit_id } = req.body;
+    if (!user_id || !boutique_id || !produit_id) {
+      return res.status(400).json({ message: "Données invalides" });
+    }
+
+    const panier = await Panier.findOne({ user_id, is_active: true });
+    if (!panier) return res.status(404).json({ message: "Panier non trouvé" });
+
+    const boutique = panier.boutiques.find(b => b.boutique_id === boutique_id);
+    if (!boutique) return res.status(404).json({ message: "Boutique non trouvée dans le panier" });
+
+    boutique.produits = boutique.produits.filter(p => p.produit_id !== produit_id);
+
+    const savedPanier = await panier.save();
+    res.status(200).json(savedPanier);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// =====================================
+// RÉCUPÉRER LE PANIER D’UN UTILISATEUR
+// =====================================
+router.get("/:user_id", async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const panier = await Panier.findOne({ user_id, is_active: true }).lean();
+    if (!panier) return res.status(404).json({ message: "Panier vide" });
+
+    res.status(200).json(panier);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// =====================================
+// RÉCUPÉRER UNE BOUTIQUE DU PANIER
+// =====================================
+router.get("/:user_id/boutique/:boutique_id", async (req, res) => {
+  try {
+    const { user_id, boutique_id } = req.params;
+
+    console.log("User ID reçu :", user_id);
+    console.log("Boutique ID reçu :", boutique_id);
+
+    const panier = await Panier.findOne({ user_id, is_active: true }).lean();
+
+    if (!panier) {
+      console.log("Aucun panier actif trouvé");
+      return res.status(404).json({ message: "Panier introuvable" });
+    }
+
+    console.log("Panier trouvé :", panier._id);
+
+    // 🔎 Comparaison en string
+    const boutique = panier.boutiques.find(
+      b => String(b.boutique_id) === boutique_id
+    );
+
+    if (!boutique) {
+      console.log("Boutique non trouvée dans le panier");
+      return res.status(404).json({ message: "Boutique non trouvée dans le panier" });
+    }
+
+    console.log("Boutique trouvée :", boutique);
+
+    res.status(200).json(boutique);
+
+  } catch (error) {
+    console.error("Erreur récupération boutique :", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
+
+// =====================================
+// RÉCUPÉRER UNE BOUTIQUE DANS TOUS LES PANIERS ACTIFS
+// =====================================
+router.get("/boutique/:boutique_id", async (req, res) => {
+  try {
+    const { boutique_id } = req.params;
+
+    console.log("Boutique ID reçu :", boutique_id);
+
+    // 🔎 Récupérer tous les paniers actifs
+    const paniers = await Panier.find({ is_active: true }).lean();
+
+    if (!paniers || paniers.length === 0) {
+      console.log("Aucun panier actif trouvé");
+      return res.status(404).json({ message: "Aucun panier actif trouvé" });
+    }
+
+    // 🔎 Filtrer les paniers contenant cette boutique
+    const result = paniers
+      .map(panier => {
+        const boutique = panier.boutiques.find(
+          b => String(b.boutique_id) === boutique_id
+        );
+        if (boutique) {
+          return {
+            user_id: panier.user_id, // on garde le user_id
+            boutique: boutique
+          };
+        }
+        return null;
+      })
+      .filter(item => item !== null);
+
+    if (result.length === 0) {
+      console.log("Aucune boutique trouvée dans les paniers");
+      return res.status(404).json({ message: "Boutique non trouvée dans aucun panier actif" });
+    }
+
+    console.log("Résultats trouvés :", result);
+
+    res.status(200).json(result);
+
+  } catch (error) {
+    console.error("Erreur récupération boutique :", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
+
+// =====================================
+// SUPPRIMER LE PANIER D’UN UTILISATEUR
+// =====================================
+router.delete("/delete/:user_id", async (req, res) => {
+  try {
+    const { user_id } = req.params;
+
+    // On peut choisir soft-delete ou hard-delete
+    // Option 1: soft-delete (désactiver le panier)
+    const panier = await Panier.findOne({ user_id, is_active: true });
+    if (!panier) return res.status(404).json({ message: "Panier non trouvé" });
+
+    panier.is_active = false;
+    await panier.save();
+
+    // Option 2: hard-delete (supprimer complètement)
+    // await Panier.deleteOne({ user_id });
+
+    res.status(200).json({ message: "Panier supprimé" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+module.exports = router;
