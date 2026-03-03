@@ -72,7 +72,6 @@ router.get(
 
 module.exports = router;
 
-
 // // Récupérer les stats pour janvier 2024
 // GET /api/annonces/analytics/stats/1/2024
 
