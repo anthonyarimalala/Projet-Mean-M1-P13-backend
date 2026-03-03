@@ -25,8 +25,14 @@ app.use("/api/boutiques", require("./routes/crudBoutiqueRoutes"));
 app.use("/api/boutique-avis", require("./routes/boutiqueAvisRoutes"));
 app.use("/api/demandes", require("./routes/DemandeLocationRoutes"));
 app.use("/api/produits", require("./routes/crudProduits"));
+
 app.use('/api/stock', require("./routes/stockRoutes"));
 app.use("/api/panier", require("./routes/panierRoutes"));
+
+app.use("/api/users", require("./routes/UserRoutes"));
+app.use("/api/annonces/analytics", require("./routes/annonceAnalyticsRoutes"));
+app.use("/api/boutiques/analytics", require("./routes/boutiqueAnalyticsRoutes"));
+
 
 
 app.listen(PORT, () =>
